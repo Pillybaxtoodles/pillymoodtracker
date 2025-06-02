@@ -1,7 +1,9 @@
 <!DOCTYPE html> 
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>PillyMood Tracker – Indie Edition</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link href="https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap" rel="stylesheet">
   <style>
     body {
@@ -9,17 +11,28 @@
       background-color: #fdf6e3;
       color: #333;
       text-align: center;
-      padding: 40px;
+      padding: 20px;
+      margin: 0;
     }
 
     h1, h3 {
       margin-bottom: 10px;
+      font-size: 1.6em;
+    }
+
+    #emojiPicker {
+      display: flex;
+      justify-content: center;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      gap: 15px;
+      margin-bottom: 20px;
+      padding: 10px 0;
     }
 
     #emojiPicker span {
       cursor: pointer;
-      margin: 0 10px;
-      padding: 5px;
+      flex: 0 0 auto;
       transition: transform 0.2s;
     }
 
@@ -34,21 +47,33 @@
       border-radius: 6px;
     }
 
+    #emojiPicker img.pat {
+      animation: pat 0.4s ease;
+    }
+
+    @keyframes pat {
+      0%   { transform: scale(1) rotate(0deg); }
+      20%  { transform: scale(0.95) rotate(-5deg); }
+      50%  { transform: scale(1.05) rotate(5deg); }
+      80%  { transform: scale(0.95) rotate(-3deg); }
+      100% { transform: scale(1) rotate(0deg); }
+    }
+
     #moodGrid {
       display: grid;
-      grid-template-columns: repeat(7, 1fr);
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
       gap: 10px;
-      justify-content: center;
+      justify-items: center;
       margin-top: 30px;
     }
 
     .mood-box {
       background-color: white;
       border-radius: 10px 25px 10px 25px;
-      width: 90px;
-      height: 90px;
+      width: 80px;
+      height: 80px;
       padding: 5px;
-      font-size: 22px;
+      font-size: 12px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -57,23 +82,36 @@
     }
 
     .mood-box img {
-      width: 26px;
-      height: 26px;
+      width: 24px;
+      height: 24px;
       object-fit: cover;
       border-radius: 6px;
       margin-bottom: 3px;
     }
 
     .mood-date {
-      font-size: 10px;
+      font-size: 9px;
       margin-bottom: 3px;
     }
 
-    button {
+    #monthHeader {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
       margin-top: 20px;
-      padding: 8px 16px;
-      font-size: 14px;
+      gap: 10px;
+    }
+
+    #monthDisplay {
+      font-weight: bold;
+      font-size: 1.1em;
+    }
+
+    button, select {
       font-family: 'Indie Flower', cursive;
+      font-size: 14px;
+      padding: 8px 12px;
       background-color: #fce4b4;
       border: none;
       border-radius: 5px;
@@ -84,21 +122,25 @@
       background-color: #fcd795;
     }
 
-    select {
-      font-family: 'Indie Flower', cursive;
-      font-size: 14px;
-      padding: 4px 8px;
-    }
-
-    #monthHeader {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 20px;
-    }
-
-    #monthDisplay {
-      font-weight: bold;
+    @media (max-width: 500px) {
+      h1 { font-size: 1.4em; }
+      h3 { font-size: 1em; }
+      #moodGrid {
+        grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+      }
+      .mood-box {
+        width: 65px;
+        height: 65px;
+        font-size: 10px;
+      }
+      .mood-box img {
+        width: 20px;
+        height: 20px;
+      }
+      #monthHeader {
+        flex-direction: column;
+        align-items: center;
+      }
     }
   </style>
 </head>
@@ -107,13 +149,13 @@
   <h3 id="todayHeader">Mood today (loading...)</h3>
 
   <div id="emojiPicker">
-    <span onclick="selectMood('happy')">
+    <span onclick="selectMood('happy', this)">
       <img src="https://i.imgur.com/DnlCPDG.png" alt="Happy">
     </span>
-    <span onclick="selectMood('excited')">
+    <span onclick="selectMood('excited', this)">
       <img src="https://i.imgur.com/zB3NwF6.png" alt="Excited">
     </span>
-    <span onclick="selectMood('grateful')">
+    <span onclick="selectMood('grateful', this)">
       <img src="https://i.imgur.com/bNftwGv.png" alt="Grateful">
     </span>
   </div>
@@ -142,7 +184,7 @@
     };
 
     let selectedYear = new Date().getFullYear();
-    let selectedMonth = new Date().getMonth(); // 0 = Jan
+    let selectedMonth = new Date().getMonth();
 
     function getTodayDate() {
       return new Date().toISOString().split("T")[0];
@@ -155,16 +197,19 @@
     function updateHeader() {
       const today = new Date();
       const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-      const readableDate = today.toLocaleDateString(undefined, options);
-      document.getElementById("todayHeader").textContent = `Mood today (${readableDate})`;
+      document.getElementById("todayHeader").textContent = `Mood today (${today.toLocaleDateString(undefined, options)})`;
     }
 
-    function selectMood(mood) {
+    function selectMood(mood, el) {
       const today = getTodayDate();
       const savedMoods = getSavedMoods();
       savedMoods[today] = mood;
       localStorage.setItem("pillymoods", JSON.stringify(savedMoods));
       showMoodGrid();
+
+      const img = el.querySelector("img");
+      img.classList.add("pat");
+      setTimeout(() => img.classList.remove("pat"), 500);
     }
 
     function showMoodGrid() {
@@ -172,6 +217,7 @@
       const grid = document.getElementById("moodGrid");
       const monthDisplay = document.getElementById("monthDisplay");
       const archiveDropdown = document.getElementById("archiveDropdown");
+
       grid.innerHTML = "";
       archiveDropdown.innerHTML = `<option value="">📁 Archive</option>`;
 
@@ -197,7 +243,6 @@
         grid.appendChild(box);
       }
 
-      // Archive dropdown (excluding current month)
       const archiveMonths = new Set();
       for (const dateStr in savedMoods) {
         const [y, m] = dateStr.split("-");
@@ -263,4 +308,4 @@
   </script>
 </body>
 </html>
-:)
+:))
